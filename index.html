@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KaissanGames</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #121212;
+            color: #E0E0E0;
+        }
+        .section-screen { display: none; }
+        .section-screen.active { display: block; }
+        .modal-backdrop {
+            background-color: rgba(0, 0, 0, 0.7);
+        }
+        .modal {
+            background-color: #1e1e1e;
+            border: 1px solid #333;
+        }
+        /* Custom styles for Checkers board */
+        .checkers-board {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            width: 100%;
+            max-width: 500px; /* Adjust as needed */
+            aspect-ratio: 1/1;
+            border: 4px solid #5a3a22;
+        }
+        .square {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .square.light { background-color: #e3c196; }
+        .square.dark { background-color: #8b4513; }
+        .piece {
+            width: 80%;
+            height: 80%;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .piece.player1 { background-color: #d13838; border: 3px solid #f0a0a0; }
+        .piece.player2 { background-color: #1e1e1e; border: 3px solid #888888; }
+        .piece.king:after {
+            content: '\f005'; /* Star icon for king */
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            color: #ffd700;
+            font-size: 60%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+        }
+        .piece.selected {
+            transform: scale(1.1);
+            box-shadow: 0 0 15px #f0e68c;
+        }
+        .possible-move {
+            background-color: rgba(46, 204, 113, 0.5);
+            border-radius: 50%;
+            width: 50%;
+            height: 50%;
+        }
+        /* Custom styles for Dominoes */
+        .dominoes-area {
+            min-height: 400px;
+            border: 2px dashed #444;
+        }
+        .domino-piece {
+            background-color: white;
+            color: black;
+            border: 1px solid #333;
+            border-radius: 5px;
+            width: 50px;
+            height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            align-items: center;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+        }
+         .domino-piece.played {
+            width: 100px;
+            height: 50px;
+            flex-direction: row;
+        }
+        .domino-piece .dots {
+            width: 100%;
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .domino-piece .separator {
+            width: 80%;
+            height: 2px;
+            background-color: #333;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200">
+
+    <!-- Header -->
+    <header class="bg-gray-800 shadow-lg p-4 flex justify-between items-center">
+        <h1 class="text-2xl font-bold text-yellow-400">KaissanGames</h1>
+        <div id="user-info" class="hidden items-center space-x-4">
+            <div class="flex items-center">
+                <img id="user-avatar" src="https://placehold.co/40x40/333333/FFFFFF?text=K" alt="Avatar" class="w-10 h-10 rounded-full border-2 border-yellow-400">
+                <span id="display-name" class="ml-2 font-semibold"></span>
+            </div>
+            <div class="flex items-center bg-gray-700 px-3 py-1 rounded-full">
+                <i class="fas fa-coins text-yellow-400 mr-2"></i>
+                <span id="kaissan-coins" class="font-bold">0</span>
+            </div>
+            <button id="logout-button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
+                <i class="fas fa-sign-out-alt"></i> Sair
+            </button>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4">
+        <!-- Auth Section -->
+        <section id="auth-section" class="section-screen active max-w-md mx-auto text-center mt-16">
+            <h2 class="text-4xl font-bold mb-8">Bem-vindo!</h2>
+            <div class="bg-gray-800 p-8 rounded-xl shadow-2xl">
+                <h3 class="text-xl mb-6">Faça login para começar a jogar</h3>
+                <div class="space-y-4">
+                     <input id="email-input" type="email" placeholder="E-mail" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-400">
+                     <input id="password-input" type="password" placeholder="Senha" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-400">
+                     <button id="login-email-button" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition duration-300">Entrar com E-mail</button>
+                     <button id="signup-email-button" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition duration-300">Registrar com E-mail</button>
+                     <div class="my-4 text-gray-400">ou</div>
+                     <button id="login-google-button" class="w-full bg-white text-gray-800 font-bold py-3 rounded-lg flex items-center justify-center hover:bg-gray-200 transition duration-300">
+                         <img src="https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png" alt="Google" class="w-6 h-6 mr-3">
+                         Entrar com Google
+                     </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Lobby Section -->
+        <section id="lobby-section" class="section-screen">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Game List -->
+                <div class="lg:col-span-2 bg-gray-800 p-6 rounded-xl shadow-2xl">
+                    <h2 class="text-3xl font-bold mb-6">Escolha um Jogo</h2>
+                    <div class="space-y-6">
+                        <!-- Damas -->
+                        <div class="bg-gray-700 p-4 rounded-lg flex items-center justify-between">
+                            <div>
+                                <h3 class="text-2xl font-semibold">Damas</h3>
+                                <p class="text-gray-400">O clássico jogo de estratégia.</p>
+                            </div>
+                            <button onclick="ui.showGameCreation('checkers')" class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-2 px-6 rounded-lg transition duration-300">Jogar</button>
+                        </div>
+                        <!-- Dominó -->
+                        <div class="bg-gray-700 p-4 rounded-lg flex items-center justify-between">
+                            <div>
+                                <h3 class="text-2xl font-semibold">Dominó</h3>
+                                <p class="text-gray-400">Junte seus amigos para uma partida.</p>
+                            </div>
+                            <button onclick="ui.showGameCreation('dominoes')" class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-2 px-6 rounded-lg transition duration-300">Jogar</button>
+                        </div>
+                         <!-- Em Breve -->
+                        <div class="bg-gray-900/50 p-4 rounded-lg flex items-center justify-between opacity-50">
+                            <div>
+                                <h3 class="text-2xl font-semibold">Xadrez (Em breve)</h3>
+                                <p class="text-gray-500">O jogo dos reis está chegando.</p>
+                            </div>
+                            <button class="bg-gray-600 text-gray-400 font-bold py-2 px-6 rounded-lg cursor-not-allowed">Jogar</button>
+                        </div>
+                    </div>
+                     <h2 class="text-3xl font-bold mt-8 mb-4">Salas Públicas</h2>
+                    <div id="public-games-list" class="space-y-2 max-h-64 overflow-y-auto">
+                        <!-- As salas públicas serão listadas aqui -->
+                    </div>
+                </div>
+                <!-- Ranking -->
+                <div class="bg-gray-800 p-6 rounded-xl shadow-2xl">
+                    <h2 class="text-3xl font-bold mb-6 text-yellow-400">
+                        <i class="fas fa-trophy"></i> Ranking Semanal
+                    </h2>
+                    <ol id="ranking-list" class="space-y-3">
+                        <!-- O ranking será listado aqui -->
+                    </ol>
+                    <p class="text-sm text-gray-500 mt-4 text-center">Reseta no Domingo, 23:59.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Game Room Section -->
+        <section id="game-room-section" class="section-screen">
+            <div class="bg-gray-800 p-6 rounded-xl shadow-2xl">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 id="game-title" class="text-3xl font-bold">Sala de Jogo</h2>
+                    <button id="leave-game-button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">Sair da Partida</button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <!-- Game Info Panel -->
+                    <div class="md:col-span-1 bg-gray-700 p-4 rounded-lg flex flex-col items-center justify-between">
+                        <div>
+                             <div id="player1-info" class="text-center mb-8">
+                                <img src="https://placehold.co/80x80/555555/FFFFFF?text=P1" class="w-20 h-20 rounded-full mx-auto border-4 border-transparent">
+                                <p class="font-bold mt-2 text-lg"></p>
+                            </div>
+                            <div class="text-center text-2xl font-bold my-4">VS</div>
+                            <div id="player2-info" class="text-center">
+                                <img src="https://placehold.co/80x80/555555/FFFFFF?text=P2" class="w-20 h-20 rounded-full mx-auto border-4 border-transparent">
+                                <p class="font-bold mt-2 text-lg"></p>
+                            </div>
+                        </div>
+                        <div id="game-status" class="mt-8 text-center text-yellow-400 font-semibold text-xl p-3 bg-gray-800 rounded-lg w-full">
+                           Aguardando oponente...
+                        </div>
+                         <div id="bet-info" class="mt-4 text-center text-sm p-2 bg-gray-900/50 rounded-lg w-full hidden">
+                            <i class="fas fa-coins text-yellow-400"></i> Aposta: <span class="font-bold"></span> KaissanCoins
+                        </div>
+                    </div>
+
+                    <!-- Game Board -->
+                    <div id="game-board-container" class="md:col-span-3 bg-gray-900 rounded-lg flex justify-center items-center p-4 min-h-[500px]">
+                        <!-- O tabuleiro de Damas ou a área de Dominó será renderizada aqui -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+    
+    <!-- Game Creation Modal -->
+    <div id="game-creation-modal" class="fixed inset-0 z-50 items-center justify-center modal-backdrop hidden">
+        <div class="modal w-full max-w-md p-6 rounded-lg shadow-xl">
+            <h2 class="text-2xl font-bold mb-4">Criar Sala de <span id="modal-game-name"></span></h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block mb-2 text-sm font-bold text-gray-400">Tipo de Sala</label>
+                    <select id="room-type-select" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600">
+                        <option value="public">Pública</option>
+                        <option value="private">Privada</option>
+                    </select>
+                </div>
+                 <div>
+                    <label for="bet-amount-input" class="block mb-2 text-sm font-bold text-gray-400">Apostar KaissanCoins (opcional)</label>
+                    <input id="bet-amount-input" type="number" placeholder="0" min="0" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600">
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-4">
+                <button id="cancel-create-game-button" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">Cancelar</button>
+                <button id="confirm-create-game-button" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg">Criar Sala</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Game Invitation Modal -->
+    <div id="invitation-modal" class="fixed inset-0 z-50 items-center justify-center modal-backdrop hidden">
+        <div class="modal w-full max-w-md p-6 rounded-lg shadow-xl text-center">
+            <h2 class="text-2xl font-bold mb-4">Sala Privada Criada!</h2>
+            <p class="text-gray-400 mb-4">Compartilhe o ID da sala com seu amigo:</p>
+            <div class="bg-gray-700 p-3 rounded-lg flex items-center justify-between">
+                <span id="game-id-display" class="text-lg font-mono"></span>
+                <button id="copy-game-id-button" class="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-lg"><i class="fas fa-copy"></i></button>
+            </div>
+             <p class="text-gray-400 my-4">Ou peça para seu amigo entrar com o ID na tela de Lobby.</p>
+            <button id="close-invitation-modal-button" class="mt-4 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg">Entendido</button>
+        </div>
+    </div>
+
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        // Importações do Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import {
+            getAuth,
+            onAuthStateChanged,
+            GoogleAuthProvider,
+            signInWithPopup,
+            createUserWithEmailAndPassword,
+            signInWithEmailAndPassword,
+            signOut
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import {
+            getFirestore,
+            doc,
+            setDoc,
+            getDoc,
+            onSnapshot,
+            collection,
+            query,
+            where,
+            addDoc,
+            updateDoc,
+            serverTimestamp,
+            limit,
+            orderBy
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        // Cole sua configuração do Firebase aqui
+        // Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyBWP5AUM29wSkb0RptZCSk7gjc7tB6V5S0",
+  authDomain: "kaissangames.firebaseapp.com",
+  projectId: "kaissangames",
+  storageBucket: "kaissangames.firebasestorage.app",
+  messagingSenderId: "1086784501734",
+  appId: "1:1086784501734:web:7c75a1353906365d6c0827",
+  measurementId: "G-4KL1Z3VGT8"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+        };
+
+        // Inicialização do Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // --- MÓDULO DE UI ---
+        const ui = {
+            // ... (código de UI movido para cá para organização)
+        }; // O código completo da UI será adicionado abaixo
+
+        // --- MÓDULO DE AUTENTICAÇÃO ---
+        const authHandler = {
+            // ... (código de autenticação movido para cá)
+        };
+
+        // --- MÓDULO DO JOGO ---
+        const gameManager = {
+             // ... (código de gerenciamento de jogo movido para cá)
+        };
+
+        // Lógica da Aplicação Principal
+        function main() {
+            // ... (lógica principal da aplicação)
+        }
+        
+        main(); // Inicia a aplicação
+
+        // --- IMPLEMENTAÇÃO COMPLETA DOS MÓDULOS ---
+
+        // MÓDULO DE UI
+        Object.assign(ui, {
+            currentScreen: 'auth-section',
+            currentModal: null,
+
+            elements: {
+                userInfo: document.getElementById('user-info'),
+                displayName: document.getElementById('display-name'),
+                userAvatar: document.getElementById('user-avatar'),
+                kaissanCoins: document.getElementById('kaissan-coins'),
+                authSection: document.getElementById('auth-section'),
+                lobbySection: document.getElementById('lobby-section'),
+                gameRoomSection: document.getElementById('game-room-section'),
+                loginEmailButton: document.getElementById('login-email-button'),
+                signupEmailButton: document.getElementById('signup-email-button'),
+                loginGoogleButton: document.getElementById('login-google-button'),
+                logoutButton: document.getElementById('logout-button'),
+                rankingList: document.getElementById('ranking-list'),
+                gameCreationModal: document.getElementById('game-creation-modal'),
+                modalGameName: document.getElementById('modal-game-name'),
+                confirmCreateGameButton: document.getElementById('confirm-create-game-button'),
+                cancelCreateGameButton: document.getElementById('cancel-create-game-button'),
+                invitationModal: document.getElementById('invitation-modal'),
+                gameIdDisplay: document.getElementById('game-id-display'),
+                copyGameIdButton: document.getElementById('copy-game-id-button'),
+                closeInvitationModalButton: document.getElementById('close-invitation-modal-button'),
+                publicGamesList: document.getElementById('public-games-list'),
+                gameBoardContainer: document.getElementById('game-board-container'),
+                player1Info: document.getElementById('player1-info'),
+                player2Info: document.getElementById('player2-info'),
+                gameStatus: document.getElementById('game-status'),
+                betInfo: document.getElementById('bet-info'),
+            },
+
+            showScreen(screenId) {
+                document.getElementById(this.currentScreen).classList.remove('active');
+                document.getElementById(screenId).classList.add('active');
+                this.currentScreen = screenId;
+            },
+            
+            showModal(modalId) {
+                this.currentModal = document.getElementById(modalId);
+                this.currentModal.classList.remove('hidden');
+                this.currentModal.classList.add('flex');
+            },
+
+            hideModal() {
+                if (this.currentModal) {
+                    this.currentModal.classList.add('hidden');
+                    this.currentModal.classList.remove('flex');
+                    this.currentModal = null;
+                }
+            },
+
+            updateUserInfo(user, userData) {
+                if (user) {
+                    this.elements.userInfo.classList.remove('hidden');
+                    this.elements.userInfo.classList.add('flex');
+                    this.elements.displayName.textContent = user.displayName || 'Jogador';
+                    this.elements.userAvatar.src = user.photoURL || `https://placehold.co/40x40/333333/FFFFFF?text=${user.displayName ? user.displayName.charAt(0) : 'J'}`;
+                    this.elements.kaissanCoins.textContent = userData?.kaissanCoins || 0;
+                    this.showScreen('lobby-section');
+                } else {
+                    this.elements.userInfo.classList.add('hidden');
+                    this.elements.userInfo.classList.remove('flex');
+                    this.showScreen('auth-section');
+                }
+            },
+            
+            updateRanking(rankingData) {
+                this.elements.rankingList.innerHTML = '';
+                if (rankingData.length === 0) {
+                    this.elements.rankingList.innerHTML = '<li class="text-gray-500">Ninguém no ranking ainda. Jogue para aparecer aqui!</li>';
+                    return;
+                }
+                rankingData.forEach((player, index) => {
+                    const icon = ['fa-trophy text-yellow-400', 'fa-medal text-gray-400', 'fa-medal text-orange-400'][index] || 'fa-star text-blue-400';
+                    const li = document.createElement('li');
+                    li.className = 'flex items-center justify-between bg-gray-700 p-2 rounded-lg';
+                    li.innerHTML = `
+                        <div class="flex items-center">
+                            <span class="font-bold w-6">${index + 1}.</span>
+                            <i class="fas ${icon} mx-2"></i>
+                            <span>${player.displayName}</span>
+                        </div>
+                        <span class="font-bold text-yellow-300">${player.score} pts</span>
+                    `;
+                    this.elements.rankingList.appendChild(li);
+                });
+            },
+            
+            showGameCreation(gameType) {
+                this.elements.modalGameName.textContent = gameType === 'checkers' ? 'Damas' : 'Dominó';
+                this.elements.confirmCreateGameButton.dataset.gameType = gameType;
+                this.showModal('game-creation-modal');
+            },
+
+            updatePublicGames(games) {
+                 this.elements.publicGamesList.innerHTML = '';
+                 if (games.length === 0) {
+                     this.elements.publicGamesList.innerHTML = '<p class="text-gray-500">Nenhuma sala pública disponível. Crie uma!</p>';
+                     return;
+                 }
+                 games.forEach(game => {
+                     const gameDiv = document.createElement('div');
+                     gameDiv.className = 'bg-gray-700 p-3 rounded-lg flex justify-between items-center';
+                     const gameName = game.gameType === 'checkers' ? 'Damas' : 'Dominó';
+                     gameDiv.innerHTML = `
+                        <div>
+                            <p class="font-bold">${gameName} - Sala de ${game.creatorName}</p>
+                            <p class="text-sm text-gray-400">Aposta: ${game.betAmount || 0} <i class="fas fa-coins text-yellow-400"></i></p>
+                        </div>
+                        <button class="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded" onclick="gameManager.joinGame('${game.id}')">Entrar</button>
+                     `;
+                     this.elements.publicGamesList.appendChild(gameDiv);
+                 });
+            },
+
+            renderGameBoard(gameData) {
+                // Mockup rendering. A full implementation would be more complex.
+                if (gameData.gameType === 'checkers') {
+                    this.elements.gameBoardContainer.innerHTML = `<div class="checkers-board bg-gray-600"></div>`;
+                    this.renderCheckersBoard(gameData.gameState);
+                } else if (gameData.gameType === 'dominoes') {
+                    this.elements.gameBoardContainer.innerHTML = `<div class="dominoes-area p-4 w-full h-full rounded-lg">Área de Dominó</div>`;
+                }
+                
+                this.updateGameInfo(gameData);
+            },
+            
+             updateGameInfo(gameData) {
+                const currentUser = auth.currentUser;
+                const player1 = gameData.players[0];
+                const player2 = gameData.players[1];
+
+                this.elements.player1Info.querySelector('p').textContent = player1.displayName;
+                this.elements.player1Info.querySelector('img').src = player1.photoURL || `https://placehold.co/80x80/555555/FFFFFF?text=${player1.displayName.charAt(0)}`;
+
+                if(player2) {
+                    this.elements.player2Info.querySelector('p').textContent = player2.displayName;
+                    this.elements.player2Info.querySelector('img').src = player2.photoURL || `https://placehold.co/80x80/555555/FFFFFF?text=${player2.displayName.charAt(0)}`;
+                } else {
+                     this.elements.player2Info.querySelector('p').textContent = "Aguardando...";
+                     this.elements.player2Info.querySelector('img').src = `https://placehold.co/80x80/555555/FFFFFF?text=?`;
+                }
+
+                if(gameData.betAmount > 0){
+                    this.elements.betInfo.classList.remove('hidden');
+                    this.elements.betInfo.querySelector('span').textContent = gameData.betAmount * 2;
+                } else {
+                    this.elements.betInfo.classList.add('hidden');
+                }
+
+                let statusText = '';
+                if(gameData.status === 'finished') {
+                    statusText = gameData.winner === currentUser.uid ? "Você Venceu!" : "Você Perdeu!";
+                } else if (gameData.status === 'waiting') {
+                    statusText = "Aguardando oponente...";
+                } else if (gameData.status === 'active') {
+                    statusText = gameData.turn === currentUser.uid ? "Sua vez!" : `Vez de ${gameData.turn === player1.uid ? player1.displayName : player2.displayName}`;
+                }
+                this.elements.gameStatus.textContent = statusText;
+                 // Highlight current player
+                this.elements.player1Info.querySelector('img').classList.remove('border-yellow-400');
+                this.elements.player2Info.querySelector('img').classList.remove('border-yellow-400');
+                 if(gameData.turn === player1.uid) {
+                     this.elements.player1Info.querySelector('img').classList.add('border-yellow-400');
+                 } else if (player2 && gameData.turn === player2.uid) {
+                     this.elements.player2Info.querySelector('img').classList.add('border-yellow-400');
+                 }
+
+            },
+            
+            renderCheckersBoard(boardState) {
+                const boardElement = document.querySelector('.checkers-board');
+                if (!boardElement) return;
+                boardElement.innerHTML = '';
+                boardState.forEach((row, r) => {
+                    row.forEach((cell, c) => {
+                        const square = document.createElement('div');
+                        square.className = `square ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
+                        square.dataset.row = r;
+                        square.dataset.col = c;
+
+                        if (cell !== 0) {
+                            const piece = document.createElement('div');
+                            piece.className = 'piece';
+                            if (cell === 1 || cell === 3) piece.classList.add('player1');
+                            if (cell === 2 || cell === 4) piece.classList.add('player2');
+                            if (cell === 3 || cell === 4) piece.classList.add('king');
+                            square.appendChild(piece);
+                        }
+                        boardElement.appendChild(square);
+                    });
+                });
+            },
+        });
+
+        // MÓDULO DE AUTENTICAÇÃO
+        Object.assign(authHandler, {
+            currentUserData: null,
+            unsubscribeUser: null,
+            
+            async handleLogin(user) {
+                if (user) {
+                    const userRef = doc(db, "users", user.uid);
+                    const userDoc = await getDoc(userRef);
+                    if (!userDoc.exists()) {
+                        // Create new user document
+                        const newUser = {
+                            displayName: user.displayName || `Jogador${user.uid.substring(0, 5)}`,
+                            email: user.email,
+                            photoURL: user.photoURL,
+                            kaissanCoins: 100, // Starting coins
+                            createdAt: serverTimestamp()
+                        };
+                        await setDoc(userRef, newUser);
+                        this.currentUserData = newUser;
+                    } 
+                    this.listenToUserDoc(user.uid);
+                    gameManager.listenToPublicGames();
+                    gameManager.listenToRanking();
+                } else {
+                    if(this.unsubscribeUser) this.unsubscribeUser();
+                    this.currentUserData = null;
+                    ui.updateUserInfo(null, null);
+                    if(gameManager.unsubscribeGames) gameManager.unsubscribeGames();
+                    if(gameManager.unsubscribeRanking) gameManager.unsubscribeRanking();
+                }
+            },
+            
+            listenToUserDoc(uid) {
+                const userRef = doc(db, "users", uid);
+                this.unsubscribeUser = onSnapshot(userRef, (doc) => {
+                    this.currentUserData = doc.data();
+                    ui.updateUserInfo(auth.currentUser, this.currentUserData);
+                });
+            },
+
+            async googleLogin() {
+                const provider = new GoogleAuthProvider();
+                try {
+                    await signInWithPopup(auth, provider);
+                } catch (error) {
+                    console.error("Erro no login com Google:", error);
+                    alert("Falha no login com Google.");
+                }
+            },
+
+            async emailSignup(email, password) {
+                try {
+                    await createUserWithEmailAndPassword(auth, email, password);
+                } catch (error) {
+                    console.error("Erro no registro com e-mail:", error);
+                    alert(`Erro: ${error.message}`);
+                }
+            },
+            
+            async emailLogin(email, password) {
+                 try {
+                    await signInWithEmailAndPassword(auth, email, password);
+                } catch (error) {
+                    console.error("Erro no login com e-mail:", error);
+                    alert(`Erro: ${error.message}`);
+                }
+            },
+
+            async logout() {
+                if(gameManager.unsubscribeCurrentGame) gameManager.unsubscribeCurrentGame();
+                await signOut(auth);
+            }
+        });
+        
+        // MÓDULO DE JOGO
+        Object.assign(gameManager, {
+            unsubscribeGames: null,
+            unsubscribeRanking: null,
+            unsubscribeCurrentGame: null,
+            currentGameId: null,
+
+            listenToPublicGames() {
+                const q = query(collection(db, "games"), where("type", "==", "public"), where("status", "==", "waiting"));
+                this.unsubscribeGames = onSnapshot(q, (snapshot) => {
+                    const games = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    ui.updatePublicGames(games);
+                });
+            },
+            
+            listenToRanking() {
+                const q = query(collection(db, "weeklyRanking"), orderBy("score", "desc"), limit(10));
+                this.unsubscribeRanking = onSnapshot(q, (snapshot) => {
+                    const ranking = snapshot.docs.map(doc => doc.data());
+                    ui.updateRanking(ranking);
+                });
+            },
+
+            async createGame(gameType) {
+                const user = auth.currentUser;
+                if (!user) return;
+                
+                const roomType = document.getElementById('room-type-select').value;
+                const betAmount = parseInt(document.getElementById('bet-amount-input').value) || 0;
+
+                if(betAmount > authHandler.currentUserData.kaissanCoins){
+                    alert("Você não tem moedas suficientes para essa aposta!");
+                    return;
+                }
+
+                ui.hideModal();
+                const gameData = {
+                    gameType,
+                    type: roomType,
+                    status: 'waiting',
+                    creatorId: user.uid,
+                    creatorName: authHandler.currentUserData.displayName,
+                    players: [{
+                        uid: user.uid,
+                        displayName: authHandler.currentUserData.displayName,
+                        photoURL: user.photoURL
+                    }],
+                    createdAt: serverTimestamp(),
+                    gameState: this.getInitialState(gameType),
+                    turn: user.uid,
+                    betAmount
+                };
+                
+                try {
+                    const docRef = await addDoc(collection(db, "games"), gameData);
+                    this.currentGameId = docRef.id;
+                    
+                    if (roomType === 'private') {
+                        ui.elements.gameIdDisplay.textContent = docRef.id;
+                        ui.showModal('invitation-modal');
+                    }
+                    
+                    this.listenToCurrentGame(docRef.id);
+                    ui.showScreen('game-room-section');
+
+                } catch (error) {
+                    console.error("Erro ao criar o jogo:", error);
+                    alert("Não foi possível criar o jogo.");
+                }
+            },
+            
+            async joinGame(gameId) {
+                const user = auth.currentUser;
+                if (!user || !gameId) return;
+
+                const gameRef = doc(db, "games", gameId);
+                const gameDoc = await getDoc(gameRef);
+
+                if (!gameDoc.exists() || gameDoc.data().status !== 'waiting') {
+                    alert("Sala não encontrada ou já está cheia.");
+                    return;
+                }
+                
+                const gameData = gameDoc.data();
+                 if(gameData.betAmount > authHandler.currentUserData.kaissanCoins){
+                    alert("Você não tem moedas suficientes para entrar nesta sala!");
+                    return;
+                }
+
+                const player2Data = {
+                    uid: user.uid,
+                    displayName: authHandler.currentUserData.displayName,
+                    photoURL: user.photoURL
+                };
+
+                await updateDoc(gameRef, {
+                    players: [...gameData.players, player2Data],
+                    status: 'active'
+                });
+                
+                this.listenToCurrentGame(gameId);
+                ui.showScreen('game-room-section');
+            },
+            
+            listenToCurrentGame(gameId) {
+                if(this.unsubscribeCurrentGame) this.unsubscribeCurrentGame();
+                
+                this.currentGameId = gameId;
+                const gameRef = doc(db, "games", gameId);
+                this.unsubscribeCurrentGame = onSnapshot(gameRef, (doc) => {
+                    if(doc.exists()) {
+                        const gameData = doc.data();
+                        ui.renderGameBoard(gameData);
+                    } else {
+                        // Game was deleted or left
+                        this.leaveGame();
+                    }
+                });
+            },
+            
+            async leaveGame() {
+                if(this.unsubscribeCurrentGame) this.unsubscribeCurrentGame();
+                this.unsubscribeCurrentGame = null;
+                this.currentGameId = null;
+                // Here you could add logic to handle game deletion if a player leaves.
+                // For simplicity, we just navigate back to the lobby.
+                alert("Você saiu da partida.");
+                ui.showScreen('lobby-section');
+            },
+
+            getInitialState(gameType) {
+                if (gameType === 'checkers') {
+                    // 0: empty, 1: player1, 2: player2, 3: p1 king, 4: p2 king
+                    return [
+                        [0, 2, 0, 2, 0, 2, 0, 2],
+                        [2, 0, 2, 0, 2, 0, 2, 0],
+                        [0, 2, 0, 2, 0, 2, 0, 2],
+                        [0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0],
+                        [1, 0, 1, 0, 1, 0, 1, 0],
+                        [0, 1, 0, 1, 0, 1, 0, 1],
+                        [1, 0, 1, 0, 1, 0, 1, 0],
+                    ];
+                }
+                if (gameType === 'dominoes') {
+                    // Implement initial state for dominoes
+                    return { board: [], hands: {} };
+                }
+                return {};
+            }
+        });
+
+        // LÓGICA PRINCIPAL
+        function main() {
+            onAuthStateChanged(auth, authHandler.handleLogin.bind(authHandler));
+
+            ui.elements.loginGoogleButton.addEventListener('click', () => authHandler.googleLogin());
+            ui.elements.logoutButton.addEventListener('click', () => authHandler.logout());
+            ui.elements.loginEmailButton.addEventListener('click', () => {
+                const email = document.getElementById('email-input').value;
+                const pass = document.getElementById('password-input').value;
+                authHandler.emailLogin(email, pass);
+            });
+            ui.elements.signupEmailButton.addEventListener('click', () => {
+                const email = document.getElementById('email-input').value;
+                const pass = document.getElementById('password-input').value;
+                authHandler.emailSignup(email, pass);
+            });
+            ui.elements.confirmCreateGameButton.addEventListener('click', (e) => {
+                gameManager.createGame(e.target.dataset.gameType);
+            });
+            ui.elements.cancelCreateGameButton.addEventListener('click', () => ui.hideModal());
+            ui.elements.closeInvitationModalButton.addEventListener('click', () => ui.hideModal());
+            ui.elements.copyGameIdButton.addEventListener('click', () => {
+                navigator.clipboard.writeText(ui.elements.gameIdDisplay.textContent);
+                alert('ID da sala copiado!');
+            });
+            document.getElementById('leave-game-button').addEventListener('click', () => gameManager.leaveGame());
+
+        }
+
+        main();
+
+    </script>
+</body>
+</html>
